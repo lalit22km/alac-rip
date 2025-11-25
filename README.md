@@ -43,8 +43,8 @@ This tool requires root privileges to install system packages and create symboli
 
 1. **Clone this repository:**
    ```bash
-   git clone https://github.com/your-username/apple-music-dl-ui.git
-   cd apple-music-dl-ui
+   git clone https://github.com/lalit22km/alac-rip.git
+   cd alac-rip
    ```
 
 2. **Switch to root user:**
