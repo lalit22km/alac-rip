@@ -2,7 +2,6 @@ import os
 import subprocess
 import urllib.request
 import zipfile
-import tarfile
 from pathlib import Path
 import sys
 
@@ -145,18 +144,18 @@ def firstsetup():
                     print(f"✅ Added existing Bento4 bin to current session PATH: {bin_dir}")
 
         # Step 3: Download and extract wrapper
-        WRAPPER_URL = "https://github.com/zhaarey/wrapper/releases/download/linux.V2/wrapper.x86_64.tar.gz"
-        wrapper_tar = PROJECT_DIR / "wrapper.x86_64.tar.gz"
+        WRAPPER_URL = "https://github.com/WorldObservationLog/wrapper/releases/download/Wrapper.x86_64.0df45b5/Wrapper.x86_64.0df45b5.zip"
+        wrapper_zip = PROJECT_DIR / "wrapper.x86_64.zip"
 
         if not WRAPPER_DIR.exists():
             print(f"⬇️ Downloading wrapper from {WRAPPER_URL}...")
-            urllib.request.urlretrieve(WRAPPER_URL, wrapper_tar)
+            urllib.request.urlretrieve(WRAPPER_URL, wrapper_zip)
             print("Extracting wrapper...")
 
             WRAPPER_DIR.mkdir(parents=True, exist_ok=True)
-            with tarfile.open(wrapper_tar, "r:gz") as tar:
-                tar.extractall(WRAPPER_DIR)
-            os.remove(wrapper_tar)
+            with zipfile.ZipFile(wrapper_zip, "r") as zip_ref:
+                zip_ref.extractall(WRAPPER_DIR)
+            os.remove(wrapper_zip)
 
             print("✅ Wrapper extracted inside project folder")
         else:
