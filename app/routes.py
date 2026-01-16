@@ -32,9 +32,9 @@ def stream_download_logs(pipe, target_list):
         if download_process and download_process.poll() is not None:
             exit_code = download_process.poll()
             if exit_code == 0:
-                target_list.append("✅ Download completed successfully!")
+                target_list.append("Download completed successfully.")
             else:
-                target_list.append(f"❌ Download failed with exit code: {exit_code}")
+                target_list.append(f"Download failed with exit code: {exit_code}")
             download_running = False
         pipe.close()
 
@@ -53,7 +53,7 @@ def stream_wrapper_logs(pipe, target_list, email=None, password=None, auto_login
                 # Check for 2FA requirement
                 if "credentialHandler:" in line and "2FA: true" in line:
                     wrapper_needs_2fa = True
-                    target_list.append("🔐 2FA Required - Please enter your 2FA code")
+                    target_list.append("2FA required - please enter your code")
                     
                 # Check for successful login message
                 if "[.] response type 6" in line:
@@ -61,15 +61,15 @@ def stream_wrapper_logs(pipe, target_list, email=None, password=None, auto_login
                     wrapper_needs_2fa = False
                     login_successful = True
                     if auto_login:
-                        target_list.append("✅ Auto-login successful! Ready for downloads.")
+                        target_list.append("Auto-login successful. Ready for downloads.")
                     else:
-                        target_list.append("✅ Wrapper login successful! Ready for downloads.")
+                        target_list.append("Wrapper login successful. Ready for downloads.")
                         # Save credentials on successful manual login
                         if email and password:
                             if save_credentials(email, password):
-                                target_list.append("💾 Credentials saved for auto-login")
+                                target_list.append("Credentials saved for auto-login")
                             else:
-                                target_list.append("⚠️ Failed to save credentials")
+                                target_list.append("Failed to save credentials")
                     
     except Exception as e:
         target_list.append(f"Error reading wrapper logs: {str(e)}")
@@ -79,15 +79,15 @@ def stream_wrapper_logs(pipe, target_list, email=None, password=None, auto_login
             exit_code = wrapper_process.poll()
             if not login_successful:
                 # Process ended before successful login
-                target_list.append(f"❌ Login failed - wrapper process exited with code: {exit_code}")
+                target_list.append(f"Login failed - wrapper process exited with code: {exit_code}")
                 wrapper_running = False
                 wrapper_needs_2fa = False
                 # Delete credentials on failed auto-login
                 if auto_login:
-                    target_list.append("🗑️ Auto-login failed, deleting saved credentials")
+                    target_list.append("Auto-login failed, deleting saved credentials")
                     delete_credentials()
             elif exit_code != 0:
-                target_list.append(f"❌ Wrapper process ended unexpectedly with exit code: {exit_code}")
+                target_list.append(f"Wrapper process ended unexpectedly with exit code: {exit_code}")
                 wrapper_running = False
                 wrapper_needs_2fa = False
             else:
@@ -147,7 +147,7 @@ def attempt_auto_login():
     """Try to automatically login with saved credentials"""
     email, password = load_credentials()
     if email and password:
-        wrapper_logs.append("🔄 Found saved credentials, attempting auto-login...")
+        wrapper_logs.append("Found saved credentials, attempting auto-login...")
         return start_wrapper_login(email, password, auto_login=True)
     return False
 
@@ -157,13 +157,13 @@ def start_wrapper_login(email, password, auto_login=False):
     
     if wrapper_process and wrapper_process.poll() is None:
         if not auto_login:
-            wrapper_logs.append("❌ Wrapper already running")
+            wrapper_logs.append("Wrapper already running")
         return False
 
     if not auto_login:
         wrapper_logs = []  # reset logs only for manual login
     
-    prefix = "🤖 Auto-login: " if auto_login else ""
+    prefix = "Auto-login: " if auto_login else ""
     wrapper_logs.append(f"{prefix}Starting wrapper login for {email}...")
     
     # Use absolute path and proper command format
@@ -193,9 +193,9 @@ def start_wrapper_login(email, password, auto_login=False):
         return True
         
     except Exception as e:
-        wrapper_logs.append(f"{prefix}❌ Error starting wrapper: {str(e)}")
+        wrapper_logs.append(f"{prefix}Error starting wrapper: {str(e)}")
         if auto_login:
-            wrapper_logs.append("🗑️ Auto-login failed, deleting saved credentials")
+            wrapper_logs.append("Auto-login failed, deleting saved credentials")
             delete_credentials()
         return False
 
@@ -243,7 +243,7 @@ def submit_2fa():
         # Send 2FA code to wrapper process
         wrapper_process.stdin.write(f"{two_fa_code}\n")
         wrapper_process.stdin.flush()
-        wrapper_logs.append(f"🔐 Submitted 2FA code: {two_fa_code}")
+        wrapper_logs.append(f"Submitted 2FA code: {two_fa_code}")
         wrapper_needs_2fa = False
         return jsonify({"status": "ok", "msg": "2FA code submitted"})
     except Exception as e:
@@ -275,18 +275,18 @@ def download():
     if special_audio:
         if format_choice == "ATMOS":
             cmd = ["go", "run", "main.go", "--atmos", link]
-            downloader_logs.append(f"🎵 Starting ATMOS download: {link}")
+            downloader_logs.append(f"Starting ATMOS download: {link}")
         elif format_choice == "AAC":
             cmd = ["go", "run", "main.go", "--aac", link]
-            downloader_logs.append(f"🎵 Starting AAC download: {link}")
+            downloader_logs.append(f"Starting AAC download: {link}")
         else:
             return jsonify({"status": "error", "msg": "Invalid format selected"})
     else:
         cmd = ["go", "run", "main.go", link]
-        downloader_logs.append(f"🎵 Starting standard download: {link}")
+        downloader_logs.append(f"Starting standard download: {link}")
     
-    downloader_logs.append(f"📁 Working directory: {amd_dir}")
-    downloader_logs.append(f"⚡ Executing: {' '.join(cmd)}")
+    downloader_logs.append(f"Working directory: {amd_dir}")
+    downloader_logs.append(f"Executing: {' '.join(cmd)}")
     
     try:
         download_process = subprocess.Popen(
@@ -304,7 +304,7 @@ def download():
         return jsonify({"status": "ok", "msg": "Download started successfully"})
         
     except Exception as e:
-        downloader_logs.append(f"❌ Error starting download: {str(e)}")
+        downloader_logs.append(f"Error starting download: {str(e)}")
         return jsonify({"status": "error", "msg": f"Failed to start download: {str(e)}"})
 
 

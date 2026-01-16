@@ -13,7 +13,7 @@ AMD_DIR = PROJECT_DIR / "apple-music-downloader"
 def firstsetup():
     # --- Check for root ---
     if os.geteuid() != 0:
-        print("❌ This script must be run as root. Exiting.")
+        print("ERROR: This script must be run as root. Exiting.")
         sys.exit(1)
 
     try:
@@ -22,14 +22,14 @@ def firstsetup():
             ["apt-get", "install", "-y", "git", "ffmpeg", "gpac", "golang-go", "wget","python3-flask","python3-yaml"],
             check=True
         )
-        print("✅ Packages installed successfully!")
+        print("Packages installed successfully.")
 
         # Step 2: Download and set up Bento4
         BENTO4_URL = "https://www.bok.net/Bento4/binaries/Bento4-SDK-1-6-0-641.x86_64-unknown-linux.zip"
         zip_path = PROJECT_DIR / "bento4.zip"
 
         if not BENTO4_DIR.exists():
-            print(f"⬇️ Downloading Bento4 from {BENTO4_URL}...")
+            print(f"Downloading Bento4 from {BENTO4_URL}...")
             urllib.request.urlretrieve(BENTO4_URL, zip_path)
             print("Extracting Bento4...")
 
@@ -38,7 +38,7 @@ def firstsetup():
                 zip_ref.extractall(BENTO4_DIR)
             os.remove(zip_path)
 
-            print("✅ Bento4 installed inside project folder")
+            print("Bento4 installed inside project folder.")
             
             # Create symbolic links to Bento4 tools in /usr/local/bin
             bin_candidates = list(BENTO4_DIR.glob("Bento4*"))
@@ -111,10 +111,10 @@ def firstsetup():
                 else:
                     print("ERROR: /usr/local/bin does not exist")
             else:
-                print("⚠️ Could not find Bento4 extracted folder")
+                print("WARN: Could not find Bento4 extracted folder")
                 
         else:
-            print("ℹ️ Bento4 already exists, skipping download")
+            print("INFO: Bento4 already exists, skipping download")
             
             # Ensure Bento4 tools are available even if already downloaded
             bin_candidates = list(BENTO4_DIR.glob("Bento4*"))
@@ -132,23 +132,23 @@ def firstsetup():
                                 missing_links.append((exe_file, link_path))
                     
                     if missing_links:
-                        print("🔗 Creating missing Bento4 symbolic links...")
+                        print("Creating missing Bento4 symbolic links...")
                         for exe_file, link_path in missing_links:
                             os.symlink(exe_file, link_path)
-                            print(f"  ✅ Created symlink: {exe_file.name}")
+                            print(f"  Created symlink: {exe_file.name}")
                     else:
                         print("✅ Bento4 tools already available system-wide")
                         
                 except Exception as e:
-                    print(f"⚠️ Could not verify/create symbolic links: {e}")
-                    print(f"✅ Added existing Bento4 bin to current session PATH: {bin_dir}")
+                    print(f"WARN: Could not verify/create symbolic links: {e}")
+                    print(f"Added existing Bento4 bin to current session PATH: {bin_dir}")
 
         # Step 3: Download and extract wrapper
         WRAPPER_URL = "https://github.com/WorldObservationLog/wrapper/releases/download/Wrapper.x86_64.0df45b5/Wrapper.x86_64.0df45b5.zip"
         wrapper_zip = PROJECT_DIR / "wrapper.x86_64.zip"
 
         if not WRAPPER_DIR.exists():
-            print(f"⬇️ Downloading wrapper from {WRAPPER_URL}...")
+            print(f"Downloading wrapper from {WRAPPER_URL}...")
             urllib.request.urlretrieve(WRAPPER_URL, wrapper_zip)
             print("Extracting wrapper...")
 
@@ -157,29 +157,41 @@ def firstsetup():
                 zip_ref.extractall(WRAPPER_DIR)
             os.remove(wrapper_zip)
 
-            print("✅ Wrapper extracted inside project folder")
+            # Ensure the wrapper binary is executable (running as root, so no sudo needed)
+            wrapper_bin = WRAPPER_DIR / "wrapper"
+            try:
+                if wrapper_bin.exists():
+                    current_mode = wrapper_bin.stat().st_mode
+                    wrapper_bin.chmod(current_mode | 0o755)
+                    print("Set execute permission on wrapper binary")
+                else:
+                    print("WARN: Wrapper binary not found after extraction")
+            except Exception as e:
+                print(f"WARN: Failed to chmod wrapper binary: {e}")
+
+            print("Wrapper extracted inside project folder")
         else:
-            print("ℹ️ Wrapper already exists, skipping download")
+            print("INFO: Wrapper already exists, skipping download")
 
         # Step 4: Clone Apple Music Downloader repo
         if not AMD_DIR.exists():
-            print("⬇️ Cloning Apple Music Downloader...")
+            print("Cloning Apple Music Downloader...")
             subprocess.run(
                 ["git", "clone", "https://github.com/zhaarey/apple-music-downloader", str(AMD_DIR)],
                 check=True
             )
-            print("✅ Apple Music Downloader cloned inside project folder")
+            print("Apple Music Downloader cloned inside project folder")
         else:
-            print("ℹ️ Apple Music Downloader already exists, skipping clone")
+            print("INFO: Apple Music Downloader already exists, skipping clone")
 
-        print("🎉 First setup complete!")
+        print("First setup complete!")
 
     except subprocess.CalledProcessError as e:
-        print(f"❌ Failed during setup: {e}")
+        print(f"ERROR: Failed during setup: {e}")
         sys.exit(1)
 
 def start():
-    print("🚀 Starting Apple Music Downloader Web UI...")
+    print("Starting Apple Music Downloader Web UI...")
 
     # Ensure Bento4 and Wrapper are in PATH locally
     bin_candidates = list(BENTO4_DIR.glob("Bento4*"))  # find extracted folder
