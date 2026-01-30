@@ -181,6 +181,24 @@ def firstsetup():
                 check=True
             )
             print("Apple Music Downloader cloned inside project folder")
+            
+            # Fix Go version format in go.mod (e.g., change "go 1.23.1" to "go 1.23")
+            go_mod_path = AMD_DIR / "go.mod"
+            if go_mod_path.exists():
+                try:
+                    with open(go_mod_path, 'r') as f:
+                        content = f.read()
+                    
+                    # Replace 3-part version numbers with 2-part format
+                    import re
+                    fixed_content = re.sub(r'^go (\d+\.\d+)\.\d+', r'go \1', content, flags=re.MULTILINE)
+                    
+                    if fixed_content != content:
+                        with open(go_mod_path, 'w') as f:
+                            f.write(fixed_content)
+                        print("Fixed Go version format in go.mod")
+                except Exception as e:
+                    print(f"WARN: Could not fix go.mod: {e}")
         else:
             print("INFO: Apple Music Downloader already exists, skipping clone")
 
