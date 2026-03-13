@@ -1,0 +1,61 @@
+# =============================================================================
+# docker-compose.yaml — Apple Music Downloader Web UI
+# =============================================================================
+#
+# Quick start:
+#   docker compose up --build           # first run (builds the image)
+#   docker compose up -d                # start in the background
+#   docker compose down                 # stop and remove the container
+#
+# The web UI is available at http://localhost:5000 once the container is up.
+# =============================================================================
+
+services:
+  alac-rip:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: alac-rip:latest
+    container_name: alac-rip
+
+    # ── Port mapping ──────────────────────────────────────────────────────────
+    # Change the left-hand side to use a different host port, e.g. "8080:5000"
+    ports:
+      - "5000:5000"
+
+    # ── Volumes ───────────────────────────────────────────────────────────────
+    volumes:
+      # Downloaded music — all three format subdirs live here.
+      - ./downloads:/downloads
+
+      # Persistent user data: credentials + Go downloader config.
+      # routes.py reads CREDENTIALS_PATH; the entrypoint seeds config.yaml
+      # into this directory on first run if it doesn't already exist.
+      - ./data:/data
+
+
+    # ── Restart policy ────────────────────────────────────────────────────────
+    restart: unless-stopped
+
+    # ── Environment ───────────────────────────────────────────────────────────
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=development
+      # Tell routes.py where to persist the .credentials file so it survives
+      # container restarts (maps into the ./data bind-mount above).
+      - CREDENTIALS_PATH=/data/.credentials
+
+    # ── Healthcheck ───────────────────────────────────────────────────────────
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+    # ── Logging ───────────────────────────────────────────────────────────────
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

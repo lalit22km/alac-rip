@@ -1,0 +1,43 @@
+# =============================================================================
+# .dockerignore — keeps the Docker build context small and clean
+# =============================================================================
+
+# These directories are downloaded fresh by the Dockerfile; exclude any
+# local copies to avoid stale data being baked into the image.
+bento4/
+wrapper/
+apple-music-downloader/
+
+# Runtime artefacts that must not be baked in
+firstrun
+.credentials
+downloads/
+config/
+data/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git history (not needed in the image)
+.git/
+.gitignore
+
+# CI / docs
+*.md
