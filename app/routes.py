@@ -13,6 +13,9 @@ wrapper_running = False
 wrapper_needs_2fa = False
 download_process = None
 download_running = False
+_auto_login_started = False  # prevent duplicate threads on rapid page refreshes
+
+LOG_MAX = 500  # maximum lines kept in memory per log list
 
 def stream_download_logs(pipe, target_list):
     """Thread target to read logs from download process and store them."""
@@ -23,8 +26,9 @@ def stream_download_logs(pipe, target_list):
             line = line.strip()
             if line:
                 target_list.append(line)
-                print(f"[DOWNLOAD LOG] {line}")  # Debug print
-                    
+                if len(target_list) > LOG_MAX:
+                    del target_list[0]
+
     except Exception as e:
         target_list.append(f"Error reading download logs: {str(e)}")
     finally:
@@ -48,7 +52,8 @@ def stream_wrapper_logs(pipe, target_list, email=None, password=None, auto_login
             line = line.strip()
             if line:
                 target_list.append(line)
-                print(f"[WRAPPER LOG] {line}")  # Debug print
+                if len(target_list) > LOG_MAX:
+                    del target_list[0]
                 
                 # Check for 2FA requirement
                 if "credentialHandler:" in line and "2FA: true" in line:
@@ -100,7 +105,13 @@ wrapper_logs = []
 downloader_logs = []
 
 def get_credentials_path():
-    """Get the path to the credentials file"""
+    """Get the path to the credentials file.
+    Override with CREDENTIALS_PATH env var (used in Docker to point at a
+    mounted volume so credentials survive container restarts).
+    """
+    env_path = os.environ.get("CREDENTIALS_PATH")
+    if env_path:
+        return env_path
     script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(script_dir, ".credentials")
 
@@ -145,10 +156,14 @@ def delete_credentials():
 
 def attempt_auto_login():
     """Try to automatically login with saved credentials"""
+    global _auto_login_started
     email, password = load_credentials()
     if email and password:
         wrapper_logs.append("Found saved credentials, attempting auto-login...")
-        return start_wrapper_login(email, password, auto_login=True)
+        result = start_wrapper_login(email, password, auto_login=True)
+        _auto_login_started = False
+        return result
+    _auto_login_started = False
     return False
 
 def start_wrapper_login(email, password, auto_login=False):
@@ -172,7 +187,7 @@ def start_wrapper_login(email, password, auto_login=False):
     wrapper_path = os.path.join(wrapper_dir, "wrapper")
     
     cmd = [wrapper_path, "-L", f"{email}:{password}"]
-    wrapper_logs.append(f"{prefix}Executing: {' '.join(cmd)}")
+    wrapper_logs.append(f"{prefix}Executing: {wrapper_path} -L [credentials hidden]")
     wrapper_logs.append(f"{prefix}Working directory: {wrapper_dir}")
     
     try:
@@ -202,12 +217,17 @@ def start_wrapper_login(email, password, auto_login=False):
 
 @app.route("/")
 def index():
-    # Check for saved credentials and attempt auto-login on first load
+    global _auto_login_started
+    # Attempt auto-login once on startup; guard against spawning multiple
+    # threads when the user refreshes the page during the login sequence.
     email, password = load_credentials()
-    if email and password and not wrapper_running and (not wrapper_process or wrapper_process.poll() is not None):
-        # Attempt auto-login in a separate thread to not block page load
+    if (email and password
+            and not wrapper_running
+            and not _auto_login_started
+            and (not wrapper_process or wrapper_process.poll() is not None)):
+        _auto_login_started = True
         threading.Thread(target=attempt_auto_login, daemon=True).start()
-    
+
     return render_template("index.html", wrapper_running=wrapper_running, has_saved_credentials=email is not None, saved_email=email if email else "")
 
 
@@ -333,7 +353,7 @@ def get_logs():
 @app.route("/stop_wrapper", methods=["POST"])
 def stop_wrapper():
     global wrapper_process, wrapper_running, wrapper_logs, wrapper_needs_2fa
-    
+
     if wrapper_process and wrapper_process.poll() is None:
         wrapper_process.terminate()
         wrapper_logs.append("Wrapper process terminated by user")
@@ -342,6 +362,29 @@ def stop_wrapper():
         return jsonify({"status": "ok", "msg": "Wrapper stopped"})
     else:
         return jsonify({"status": "error", "msg": "Wrapper not running"})
+
+@app.route("/stop_download", methods=["POST"])
+def stop_download():
+    global download_process, download_running, downloader_logs
+
+    if download_process and download_process.poll() is None:
+        download_process.terminate()
+        downloader_logs.append("Download cancelled by user")
+        download_running = False
+        return jsonify({"status": "ok", "msg": "Download stopped"})
+    else:
+        return jsonify({"status": "error", "msg": "No download in progress"})
+
+@app.route("/clear_logs", methods=["POST"])
+def clear_logs():
+    global wrapper_logs, downloader_logs
+
+    target = request.json.get("target", "all") if request.json else "all"
+    if target in ("wrapper", "all"):
+        wrapper_logs.clear()
+    if target in ("downloader", "all"):
+        downloader_logs.clear()
+    return jsonify({"status": "ok"})
 
 @app.route("/settings")
 def settings():

@@ -71,7 +71,23 @@ else
 fi
 
 # ── Default config.yaml ────────────────────────────────────────────────────────
+# If the /data volume is mounted (docker-compose), keep config there so it
+# persists across container recreations and symlink it into the expected path.
+# Fall back to writing directly in the apple-music-downloader directory.
 CONFIG_FILE="/app/apple-music-downloader/config.yaml"
+if [ -d "/data" ]; then
+    PERSISTENT_CONFIG="/data/config.yaml"
+    if [ -f "$PERSISTENT_CONFIG" ] && [ ! -f "$CONFIG_FILE" ]; then
+        info "Linking persistent config from /data/config.yaml"
+        ln -sf "$PERSISTENT_CONFIG" "$CONFIG_FILE"
+    elif [ ! -f "$PERSISTENT_CONFIG" ] && [ -f "$CONFIG_FILE" ]; then
+        info "Moving config to /data for persistence"
+        mv "$CONFIG_FILE" "$PERSISTENT_CONFIG"
+        ln -sf "$PERSISTENT_CONFIG" "$CONFIG_FILE"
+    elif [ ! -f "$PERSISTENT_CONFIG" ] && [ ! -f "$CONFIG_FILE" ]; then
+        CONFIG_FILE="$PERSISTENT_CONFIG"  # write directly to /data
+    fi
+fi
 
 if [ ! -f "$CONFIG_FILE" ]; then
     section "Creating default config.yaml"

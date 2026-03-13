@@ -2,26 +2,40 @@ body {
     font-family: "Segoe UI", sans-serif;
 }
 
+/* ── Log box ─────────────────────────────────────────────────────────────────── */
+
 .log-box {
     background: #111;
     border: 1px solid #444;
-    padding: 10px;
-    height: 200px;
+    padding: 8px 10px;
+    height: 350px;
     overflow-y: auto;
     font-family: monospace;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
     white-space: pre-wrap;
-    border-radius: 8px;
+    border-radius: 6px;
 }
 
-/* 2FA Modal Styles */
+.log-box div {
+    padding: 1px 0;
+}
+
+/* Colour-coded log line classes */
+.log-ok   { color: #28a745; }
+.log-err  { color: #dc3545; }
+.log-info { color: #17a2b8; }
+.log-warn { color: #ffc107; }
+
+/* ── 2FA modal ───────────────────────────────────────────────────────────────── */
+
 .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.75);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -37,7 +51,7 @@ body {
     max-width: 450px;
     width: 90%;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-    animation: modalSlideIn 0.3s ease-out;
+    animation: modalSlideIn 0.25s ease-out;
     color: white;
 }
 
@@ -68,7 +82,7 @@ body {
     color: white;
     font-size: 1.2rem;
     letter-spacing: 2px;
-    transition: all 0.3s ease;
+    transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .modal-body input:focus {
@@ -77,17 +91,7 @@ body {
     box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
 }
 
-.gap-2 {
-    gap: 0.5rem !important;
-}
-
 @keyframes modalSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-30px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+    from { opacity: 0; transform: translateY(-20px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);     }
 }

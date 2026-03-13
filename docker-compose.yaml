@@ -25,17 +25,14 @@ services:
 
     # ── Volumes ───────────────────────────────────────────────────────────────
     volumes:
-      # Persist downloaded music files on the host.
-      # All three format folders (alac/atmos/aac) live under ./downloads.
+      # Downloaded music — all three format subdirs live here.
       - ./downloads:/downloads
 
-      # Persist the Go downloader config between container restarts.
-      # Remove this line if you prefer a fresh config every time.
-      - ./config:/app/apple-music-downloader/config-vol
+      # Persistent user data: credentials + Go downloader config.
+      # routes.py reads CREDENTIALS_PATH; the entrypoint seeds config.yaml
+      # into this directory on first run if it doesn't already exist.
+      - ./data:/data
 
-      # Persist saved login credentials (.credentials file) so auto-login
-      # survives container restarts.
-      - ./data:/app/data-vol
 
     # ── Restart policy ────────────────────────────────────────────────────────
     restart: unless-stopped
@@ -43,10 +40,10 @@ services:
     # ── Environment ───────────────────────────────────────────────────────────
     environment:
       - PYTHONUNBUFFERED=1
-      # Set to "production" to suppress Flask's debug output.
-      # Note: the Flask debug server is fine for personal/local use;
-      # for a production deployment consider gunicorn instead.
       - FLASK_ENV=development
+      # Tell routes.py where to persist the .credentials file so it survives
+      # container restarts (maps into the ./data bind-mount above).
+      - CREDENTIALS_PATH=/data/.credentials
 
     # ── Healthcheck ───────────────────────────────────────────────────────────
     healthcheck:
