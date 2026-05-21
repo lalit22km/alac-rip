@@ -56,7 +56,7 @@ def stream_wrapper_logs(pipe, target_list, email=None, password=None, auto_login
                     target_list.append("2FA required - please enter your code")
                     
                 # Check for successful login message
-                if "[.] response type 6" in line:
+                if "[!] listening account info request on" in line or "[.] response type 6" in line:
                     wrapper_running = True
                     wrapper_needs_2fa = False
                     login_successful = True
@@ -347,15 +347,86 @@ def stop_wrapper():
 def settings():
     return render_template("settings.html")
 
+DEFAULT_CONFIG = {
+    "media-user-token": "your-media-user-token",
+    "authorization-token": "your-authorization-token",
+    "language": "",
+    "lrc-type": "lyrics",
+    "lrc-format": "lrc",
+    "embed-lrc": True,
+    "save-lrc-file": False,
+    "save-artist-cover": False,
+    "save-animated-artwork": False,
+    "emby-animated-artwork": False,
+    "embed-cover": True,
+    "cover-size": "5000x5000",
+    "cover-format": "jpg",
+    "tag-sort-order": True,
+    "tag-itunes-id": True,
+    "alac-save-folder": "AM-DL downloads",
+    "atmos-save-folder": "AM-DL-Atmos downloads",
+    "aac-save-folder": "AM-DL-AAC downloads",
+    "mv-save-folder": "AM-DL-MV downloads",
+    "max-memory-limit": 256,
+    "decrypt-m3u8-port": "127.0.0.1:10020",
+    "get-m3u8-port": "127.0.0.1:20020",
+    "get-m3u8-from-device": True,
+    "get-m3u8-mode": "hires",
+    "aac-type": "aac-lc",
+    "alac-max": 192000,
+    "atmos-max": 2768,
+    "limit-max": 200,
+    "album-folder-format": "{AlbumName}",
+    "playlist-folder-format": "{PlaylistName}",
+    "song-file-format": "{SongNumer}. {SongName}",
+    "artist-folder-format": "{UrlArtistName}",
+    "explicit-choice": "[E]",
+    "clean-choice": "[C]",
+    "apple-master-choice": "[M]",
+    "use-songinfo-for-playlist": False,
+    "dl-albumcover-for-playlist": False,
+    "mv-audio-type": "atmos",
+    "mv-max": 2160,
+    "storefront": "us",
+    "alac-fix": False,
+    "convert-after-download": False,
+    "convert-format": "flac",
+    "convert-keep-original": False,
+    "convert-skip-if-source-matches": True,
+    "ffmpeg-path": "ffmpeg",
+    "convert-extra-args": "",
+    "convert-with-metadata": True,
+    "convert-warn-lossy-to-lossless": True,
+    "convert-skip-lossy-to-lossless": True,
+    "convert-check-bad-alac": False,
+    "convert-delete-bad-alac": False,
+}
+
+def get_config_path():
+    script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    amd_dir = os.path.join(script_dir, "apple-music-downloader")
+    # Create the directory if it somehow doesn't exist yet
+    os.makedirs(amd_dir, exist_ok=True)
+    return os.path.join(amd_dir, "config.yaml")
+
+def ensure_config_exists(config_path):
+    """Write DEFAULT_CONFIG to config.yaml if the file is missing."""
+    if not os.path.exists(config_path):
+        print(f"[INFO] config.yaml not found at {config_path}, creating default...")
+        with open(config_path, "w", encoding="utf-8") as f:
+            yaml.dump(DEFAULT_CONFIG, f, default_flow_style=False, allow_unicode=True)
+        print("[INFO] Default config.yaml created.")
+
 @app.route("/get_config")
 def get_config():
     try:
-        script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        config_path = os.path.join(script_dir, "apple-music-downloader", "config.yaml")
-        
-        with open(config_path, 'r', encoding='utf-8') as file:
+        config_path = get_config_path()
+        ensure_config_exists(config_path)
+        with open(config_path, "r", encoding="utf-8") as file:
             config = yaml.safe_load(file)
-            return jsonify({"status": "ok", "config": config})
+        # Merge with defaults so any new keys added later are always present
+        merged = {**DEFAULT_CONFIG, **(config or {})}
+        return jsonify({"status": "ok", "config": merged})
     except Exception as e:
         return jsonify({"status": "error", "msg": str(e)})
 
@@ -363,8 +434,8 @@ def get_config():
 def save_config():
     try:
         script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        config_path = os.path.join(script_dir, "apple-music-downloader", "config.yaml")
-        
+        config_path = get_config_path()
+        ensure_config_exists(config_path)
         config_data = request.json
         
         # Define fields that should be integers
@@ -454,8 +525,8 @@ def get_download_folders():
     """Get download folder paths from config with Windows to WSL path translation"""
     try:
         script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        config_path = os.path.join(script_dir, "apple-music-downloader", "config.yaml")
-        
+        config_path = get_config_path()
+        ensure_config_exists(config_path)
         with open(config_path, 'r', encoding='utf-8') as file:
             config = yaml.safe_load(file)
             
